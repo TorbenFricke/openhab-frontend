@@ -144,6 +144,42 @@ class SwitchItem extends Item {
 }
 
 
+class ButtonGroupItem extends Item {
+
+  buttons () {
+    let btns = [];
+    Object.keys(this.props.mapping).forEach(key => {
+      let value = this.props.mapping[key];
+      btns.push(
+        <Reactstrap.Button outline
+                           color="secondary"
+                           size="sm"
+                           active={this.state.state === key}
+                           onClick={() => this.setOpenhabState(key)}>
+          { value }
+        </Reactstrap.Button>
+      )
+    });
+    return btns;
+  }
+
+  render() {
+    return (
+      <div>
+        <span className="align-text-top">
+          {this.label()}
+        </span>
+        <span className="float-right">
+          <Reactstrap.ButtonGroup>
+            { this.buttons() }
+          </Reactstrap.ButtonGroup>
+        </span>
+      </div>
+    );
+  }
+}
+
+
 class WebView extends React.Component {
   render () {
     return (
@@ -276,8 +312,9 @@ var tabData = {
     <SwitchItem name="Presence_IFTTT_Torben" label="Presence IFTTT Torben"/>,
     <SwitchItem name="Presence_combined" label="Presence"/>
   ],
-  "Flur": [
+  "Sonstiges": [
     <DimmerItem name="PhasenanschnittFlur" step={10} unit="%" label="Licht Flur"/>,
+    <ButtonGroupItem name="Heating_Mode" mapping={{ 0:"Normal", 1:"Urlaub", 2:"Zu Hause" }}/>
   ],
   "Chart": [
     <WebView src="/chart?channels=Wohnzimmer,Temperature_Wohnzimmer;Schlafzimmer,Temperature_Schlafzimmer;Bad,Temperature_Bad&since=168"/>
