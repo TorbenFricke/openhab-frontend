@@ -1,9 +1,104 @@
-// http://10.0.0.44:8080/rest/events?topics=smarthome/items
+function parseMessage(message) {
+  let lines = message.split('\n');
+  let ret = [];
+  let items = [];
+
+  lines.reverse().forEach(function (line) {
+    try {
+      // clean line and turn int into json
+      let obj = JSON.parse(line.replace("data: ", ""));
+      let item = obj.topic.split("/").slice(-2, -1)[0];
+
+      // try not to include redundant events
+      // (loop is reversed to make sure, the most recent event of an item gets parsed)
+      if (!items.includes(item)) {
+        items.push(item);
+
+        // create event obj
+        let event = {};
+        event.item = item;
+        event.payload = JSON.parse(obj.payload);
+        ret.push(event)
+      }
+
+    } catch (e) {}
+  });
+  return ret;
+}
+
+
+class EventListener {
+  constructor() {
+    this.items = {};
+    this.listen();
+  }
+
+
+  subscribe(item) {
+    this.items[item.props.name] = item;
+  }
+
+
+  listen () {
+    // event listener
+    let event_url = "/rest/events?topics=smarthome/items";
+
+    let last_response_len = false;
+
+    var items = this.items;
+    $.ajax(event_url, {
+      xhrFields: {
+        onprogress: function(e)
+        {
+          var this_response, response = e.currentTarget.response;
+          if(last_response_len === false)
+          {
+            // first response
+            this_response = response;
+            last_response_len = response.length;
+          }
+          else
+          {
+            // all other responses
+            this_response = response.substring(last_response_len);
+            last_response_len = response.length;
+          }
+          let parsed = parseMessage(this_response);
+
+          // iterate over all events
+          parsed.forEach(function (event) {
+            // update items
+            if (Object.keys(items).includes(event.item)) {
+              console.log(event.payload);
+              items[event.item].setStateExternally(event.payload.value)
+            }
+          });
+
+        }
+      }
+    })
+    .done(function(data)
+    {
+        console.log('Complete response = ' + data);
+    })
+    .fail(function(data)
+    {
+        console.log('Error: ', data);
+    });
+  }
+
+}
+
+// listens for events from openhab api
+var listener = new EventListener;
+
 
 
 class Item extends React.Component {
   constructor(props) {
     super(props);
+    // the listener will update this items with events from the openhab event stream
+    listener.subscribe(this);
     // default state of item. Is populated through an API request
     this.state = {};
   }
@@ -13,6 +108,10 @@ class Item extends React.Component {
       return this.props.label
     }
     return this.props.name
+  }
+
+  setStateExternally(value) {
+    this.setState({ state: value });
   }
 
   refresh () {
@@ -40,7 +139,7 @@ class Item extends React.Component {
 
   componentDidMount() {
     this.refresh();
-    this.interval = setInterval(() => this.refresh(), 5000);
+    //this.interval = setInterval(() => this.refresh(), 5000);
   }
 
   componentWillUnmount() {
@@ -312,7 +411,11 @@ var tabData = {
     <SwitchItem name="Presence_IFTTT_Torben" label="Presence IFTTT Torben"/>,
     <SwitchItem name="Presence_combined" label="Presence"/>
   ],
-  "Sonstiges": [
+  "Playground": [
+    <SwitchItem name="BeamerUp"/>,
+    <SwitchItem name="BeamerDown"/>,
+    <SwitchItem name="AlexaAlarm"/>,
+    <DimmerItem name="AlarmNumber" step={1}/>,
     <DimmerItem name="PhasenanschnittFlur" step={10} unit="%" label="Licht Flur"/>,
     <ButtonGroupItem name="Heating_Mode" mapping={{ 0:"Normal", 1:"Urlaub", 2:"Zu Hause" }}/>
   ],
