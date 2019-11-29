@@ -69,8 +69,9 @@ class EventListener {
           parsed.forEach(function (event) {
             // update items
             if (Object.keys(items).includes(event.item)) {
-              console.log(event.payload);
-              items[event.item].setStateExternally(event.payload.value)
+              if (event.payload["value"] !== undefined) {
+                items[event.item].setStateExternally(event.payload.value)
+              }
             }
           });
 
@@ -133,7 +134,7 @@ class Item extends React.Component {
       contentType: "text/plain",
       data: state.toString()
     });
-    this.setState({ "state": state.toString() })
+    //this.setState({ "state": state.toString() })
   }
 
 
